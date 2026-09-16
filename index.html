@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DIM Algebra N=2 — From Paper to Verified Study Material</title>
+<meta name="description" content="An interactive flow map of how the N-body representation of the DIM algebra, its Cherednik and R-operators and the operators on the (-1,r) ray were reconstructed and symbolically verified from arXiv:2406.16688.">
+<meta name="color-scheme" content="dark">
+<meta property="og:title" content="DIM Algebra N=2 — From Paper to Verified Study Material">
+<meta property="og:description" content="Interactive map: 21 cards, 27 relations, 5 groups, 45/45 symbolic checks at N=2.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230B0F17'/%3E%3Cg fill='none' stroke='%237C3AED' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M8 22V10M8 22h9'/%3E%3Cpath d='M17 22l7-7-6-6'/%3E%3C/g%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#0B0F17; --bg2:#0E1420; --panel:#121826; --panel2:#161E2E;
+    --line:#222C3F; --line2:#2C3A52;
+    --fg:#E8EFFA; --fg2:#A9BAD3; --fg3:#7C8DA8;
+    --blue:#3B82F6; --violet:#8B5CF6; --green:#10B981; --amber:#F59E0B; --pink:#EC4899;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1100px 620px at 12% -8%, rgba(59,130,246,.16), transparent 60%),
+      radial-gradient(900px 560px at 92% 4%, rgba(139,92,246,.15), transparent 62%),
+      var(--bg);
+    color:var(--fg); font-family:var(--sans);
+    -webkit-font-smoothing:antialiased; line-height:1.62;
+  }
+  a{color:inherit}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 22px}
+
+  /* ---------- top bar ---------- */
+  .top{position:sticky;top:0;z-index:30;backdrop-filter:blur(12px);
+       background:rgba(11,15,23,.78);border-bottom:1px solid var(--line)}
+  .top .wrap{display:flex;align-items:center;gap:14px;height:58px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:650;letter-spacing:.2px}
+  .brand svg{display:block}
+  .brand span{font-family:var(--mono);font-size:15px}
+  .top nav{margin-left:auto;display:flex;gap:18px;align-items:center;font-size:14px;color:var(--fg2)}
+  .top nav a{text-decoration:none;border-bottom:1px solid transparent;padding-bottom:1px}
+  .top nav a:hover{color:var(--fg);border-bottom-color:var(--line2)}
+
+  /* ---------- hero ---------- */
+  header.hero{padding:64px 0 30px}
+  .eyebrow{font-family:var(--mono);font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--violet);margin:0 0 16px}
+  h1{margin:0 0 18px;font-size:clamp(28px,4.4vw,46px);line-height:1.16;letter-spacing:-.022em;font-weight:700}
+  h1 em{font-style:normal;background:linear-gradient(92deg,var(--blue),var(--violet) 55%,var(--pink));
+        -webkit-background-clip:text;background-clip:text;color:transparent}
+  .lede{margin:0;color:var(--fg2);font-size:clamp(15.5px,1.6vw,18px);max-width:74ch}
+  .lede b{color:var(--fg);font-weight:600}
+  .cta{display:flex;flex-wrap:wrap;gap:12px;margin:28px 0 8px}
+  .btn{display:inline-flex;align-items:center;gap:9px;text-decoration:none;font-size:14.5px;font-weight:600;
+       padding:11px 17px;border-radius:11px;border:1px solid var(--line2);background:var(--panel);color:var(--fg);
+       transition:transform .14s ease,border-color .14s ease,background .14s ease}
+  .btn:hover{transform:translateY(-1px);border-color:#3A4C6B;background:var(--panel2)}
+  .btn.primary{background:linear-gradient(96deg,#2563EB,#7C3AED);border-color:transparent;color:#fff}
+  .btn.primary:hover{filter:brightness(1.08)}
+  .btn small{font-weight:500;color:var(--fg3);font-family:var(--mono)}
+  .btn.primary small{color:rgba(255,255,255,.78)}
+
+  /* ---------- stats ---------- */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:34px 0 6px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px 16px}
+  .stat .n{font-family:var(--mono);font-size:23px;font-weight:660;letter-spacing:-.01em}
+  .stat .k{font-size:12.5px;color:var(--fg3);margin-top:3px}
+  .stat.g .n{color:var(--green)} .stat.b .n{color:var(--blue)}
+  .stat.v .n{color:var(--violet)} .stat.a .n{color:var(--amber)}
+
+  /* ---------- sections ---------- */
+  section{padding:44px 0}
+  h2{font-size:20px;margin:0 0 6px;letter-spacing:-.01em}
+  h2 + .sub{color:var(--fg3);font-size:14px;margin:0 0 22px}
+
+  /* ---------- canvas embed ---------- */
+  .mapcard{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+  .mapcard .bar{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line);
+                background:var(--bg2);font-family:var(--mono);font-size:12.5px;color:var(--fg3)}
+  .dot{width:9px;height:9px;border-radius:50%;background:#2B3852}
+  .mapcard .bar .sp{margin-left:auto;display:flex;gap:16px;align-items:center}
+  .mapcard .bar a{text-decoration:none;color:var(--fg3)}
+  .mapcard .bar a:hover{color:var(--fg)}
+  iframe{display:block;width:100%;height:min(78vh,860px);border:0;background:var(--bg)}
+  .hint{color:var(--fg3);font-size:13px;margin:12px 2px 0}
+
+  /* ---------- groups ---------- */
+  .groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(268px,1fr));gap:13px}
+  .grp{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--c);border-radius:12px;padding:15px 16px}
+  .grp h3{margin:0 0 5px;font-size:15px;display:flex;align-items:center;gap:9px}
+  .grp h3 i{width:9px;height:9px;border-radius:3px;background:var(--c);display:inline-block;font-style:normal}
+  .grp p{margin:0;color:var(--fg2);font-size:13.6px}
+  .grp .tags{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px}
+  .grp .tags b{font-family:var(--mono);font-size:11.5px;font-weight:500;color:var(--fg3);
+               border:1px solid var(--line2);border-radius:6px;padding:2px 7px}
+
+  /* ---------- ledger table ---------- */
+  .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:13px;background:var(--panel)}
+  table{width:100%;border-collapse:collapse;font-size:14px;min-width:620px}
+  th,td{text-align:left;padding:11px 15px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--fg3);font-weight:620;background:var(--bg2)}
+  tr:last-child td{border-bottom:0}
+  td.mono,.mono{font-family:var(--mono);font-size:13px}
+  .pill{display:inline-block;font-size:11.5px;font-weight:650;padding:2.5px 9px;border-radius:999px;white-space:nowrap}
+  .ok{background:rgba(16,185,129,.14);color:#34D399;border:1px solid rgba(16,185,129,.32)}
+  .no{background:rgba(245,158,11,.13);color:#FBBF24;border:1px solid rgba(245,158,11,.3)}
+
+  /* ---------- formula block ---------- */
+  .eq{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:15px 17px;margin:0 0 12px}
+  .eq .lbl{font-family:var(--mono);font-size:12px;color:var(--violet);margin-bottom:7px}
+  .eq .txt{font-family:var(--mono);font-size:13.4px;color:var(--fg);overflow-x:auto;white-space:nowrap}
+  .eq .why{color:var(--fg3);font-size:13px;margin-top:8px;white-space:normal}
+
+  /* ---------- callout ---------- */
+  .callout{border:1px solid rgba(245,158,11,.3);border-left:3px solid var(--amber);background:rgba(245,158,11,.07);
+           border-radius:12px;padding:16px 18px}
+  .callout h3{margin:0 0 7px;font-size:15px;color:#FCD34D}
+  .callout p{margin:0 0 8px;color:var(--fg2);font-size:14px}
+  .callout p:last-child{margin-bottom:0}
+  .callout code{font-family:var(--mono);font-size:13px;background:rgba(255,255,255,.05);padding:1px 6px;border-radius:5px}
+
+  /* ---------- footer ---------- */
+  footer{border-top:1px solid var(--line);margin-top:26px;padding:26px 0 54px;color:var(--fg3);font-size:13.2px}
+  footer .cols{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:22px}
+  footer h4{margin:0 0 8px;font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--fg3);font-weight:620}
+  footer a{text-decoration:none;border-bottom:1px solid var(--line2)}
+  footer a:hover{color:var(--fg)}
+  footer ul{margin:0;padding:0;list-style:none}
+  footer li{margin:0 0 5px}
+  .fine{margin-top:24px;padding-top:16px;border-top:1px solid var(--line);font-size:12.6px;color:#63748F}
+
+  @media (max-width:760px){
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .top nav{display:none}
+    footer .cols{grid-template-columns:1fr}
+    iframe{height:70vh}
+    header.hero{padding:40px 0 20px}
+  }
+</style>
+</head>
+<body>
+
+<div class="top"><div class="wrap">
+  <div class="brand">
+    <svg width="21" height="21" viewBox="0 0 32 32" aria-hidden="true">
+      <rect width="32" height="32" rx="7" fill="#161E2E"/>
+      <g fill="none" stroke="#8B5CF6" stroke-width="2.4" stroke-linecap="round">
+        <path d="M8 22V10M8 22h9"/><path d="M17 22l7-7-6-6"/>
+      </g>
+    </svg>
+    <span>mathflow</span>
+  </div>
+  <nav>
+    <a href="#map">Map</a>
+    <a href="#contents">Contents</a>
+    <a href="#ledger">Verification</a>
+    <a href="#source">Source</a>
+  </nav>
+</div></div>
+
+<header class="hero"><div class="wrap">
+  <p class="eyebrow">OmniFlow map · arXiv:2406.16688</p>
+  <h1>DIM Algebra <em>N=2</em><br>From paper to verified study material</h1>
+  <p class="lede">
+    How the <b>N-body representation</b> of the DIM algebra &mdash; its Cherednik operators, its
+    <b>R</b>-operators and the operators attached to the <span class="mono">(-1,r)</span> ray &mdash;
+    were reconstructed from the paper, checked symbolically, and turned into study material.
+    Every card carries the formula it is about and states exactly what was verified and what was not.
+  </p>
+  <div class="cta">
+    <a class="btn primary" href="#map">Open the interactive map
+      <small>21 cards · 27 relations</small></a>
+    <a class="btn" href="canvas.html" target="_blank" rel="noopener">Full screen <small>↗</small></a>
+    <a class="btn" href="https://arxiv.org/abs/2406.16688" target="_blank" rel="noopener">The paper <small>arXiv</small></a>
+  </div>
+
+  <div class="stats">
+    <div class="stat v"><div class="n">21</div><div class="k">cards, each with a full note</div></div>
+    <div class="stat b"><div class="n">27</div><div class="k">typed relations</div></div>
+    <div class="stat a"><div class="n">45/45</div><div class="k">symbolic checks passed at N=2</div></div>
+    <div class="stat g"><div class="n">5</div><div class="k">functional groups</div></div>
+  </div>
+</div></header>
+
+<section id="map"><div class="wrap">
+  <h2>The map</h2>
+  <p class="sub">Click a card to read its note with the formulas rendered. Click it again in the panel to
+     highlight what feeds it (blue) and what it feeds (red). Drag to rearrange, scroll to zoom, search across all notes.</p>
+  <div class="mapcard">
+    <div class="bar">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <span style="margin-left:8px">DIMAlgebraN2FromPapertoV-775n · clusters</span>
+      <span class="sp">
+        <span>offline · no server</span>
+        <a href="canvas.html" target="_blank" rel="noopener">open full screen ↗</a>
+      </span>
+    </div>
+    <iframe src="canvas.html" title="OmniFlow interactive map: DIM Algebra N=2" loading="lazy"></iframe>
+  </div>
+  <p class="hint">The map is a single self-contained HTML file with KaTeX inlined &mdash; it renders identically offline.</p>
+</div></section>
+
+<section id="contents"><div class="wrap">
+  <h2>What the map contains</h2>
+  <p class="sub">Five groups, laid out left to right in the order the reconstruction actually happened.</p>
+  <div class="groups">
+    <div class="grp" style="--c:#059669">
+      <h3><i></i>Sources &amp; related reading</h3>
+      <p>The primary paper and the follow-up that carries the same DIM/DAHA dictionary to type C<sup>∨</sup>C.</p>
+      <div class="tags"><b>ref-paper</b><b>ref-bishler</b></div>
+    </div>
+    <div class="grp" style="--c:#2563EB">
+      <h3><i></i>Theory core</h3>
+      <p>The DIM algebra and the four operator families the paper builds from it: <b>R</b>-operators, Cherednik operators, Macdonald operators, and the rays with their word operators.</p>
+      <div class="tags"><b>def-dim</b><b>def-roperator</b><b>def-cherednik</b><b>def-macdonald</b><b>def-rays</b></div>
+    </div>
+    <div class="grp" style="--c:#7C3AED">
+      <h3><i></i>N=2 reconstruction</h3>
+      <p>The worked layer: building blocks, the D(u) factorisation, the t / t² dictionary, the notation trap, eq. (60), and the two lemmas — degree lowering and R‑invertibility.</p>
+      <div class="tags"><b>ex-blocks</b><b>eq-du</b><b>eq-d12</b><b>rem-eq52</b><b>eq-eq60</b><b>lem-degree</b><b>lem-rinv</b></div>
+    </div>
+    <div class="grp" style="--c:#D97706">
+      <h3><i></i>Verification</h3>
+      <p>The SymPy harness, the acceptance rule used for identities, and the resulting status. This is where the map distinguishes checked results from quoted ones.</p>
+      <div class="tags"><b>task-verify</b><b>rem-numeric</b><b>res-45</b></div>
+    </div>
+    <div class="grp" style="--c:#DB2777">
+      <h3><i></i>Deliverables</h3>
+      <p>The HTML guide, the 16-page LaTeX lecture notes, the close-reading page in the notes vault, and this public map.</p>
+      <div class="tags"><b>del-html</b><b>del-tex</b><b>del-obsidian</b><b>del-site</b></div>
+    </div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2>Two results worth stating on their own</h2>
+  <p class="sub">Both are exact, and both are the reason the rest of the reconstruction hangs together.</p>
+
+  <div class="eq">
+    <div class="lbl">factorisation of D(u)</div>
+    <div class="txt">D(u) = ∏_i ( 1 + u·t^(N-1)·C_i )&nbsp; =&nbsp; 1 + u·D_1 + u²·D_2&nbsp;&nbsp; (N = 2)</div>
+    <div class="why">The generating function of the Macdonald operators is a product of linear factors in the
+      Cherednik operators. Matching the coefficients of u and u² gives t(C_1+C_2) = D_1 and t²C_1C_2 = D_2.
+      Commutativity of the D_k is therefore inherited from [C_1, C_2] = 0 rather than proved a second time.</div>
+  </div>
+
+  <div class="callout">
+    <h3>Notation trap — the same letter for two different operators</h3>
+    <p>Section 6.2.3 and eq. (52) of the paper both write <code>C_i</code>, but eq. (52) silently redefines
+       <code>C_i := x_i · C̃_i</code>. At N = 2 the discrepancy is</p>
+    <p class="mono" style="color:#FCD34D">x_1·C̃_1 − C_1 = (1/t − 1)·s_{1,2}·q^{D_1}</p>
+    <p>and it does <b>not</b> vanish on symmetric functions — so this is a genuine change of operator, not a
+       harmless abuse of notation. Every label in the verification harness names which of the two objects it means.</p>
+  </div>
+</div></section>
+
+<section id="ledger"><div class="wrap">
+  <h2>Verification ledger</h2>
+  <p class="sub">45 checks, 45 passed, 0 failed — and the script reproduces the same 45 lines on a re-run.
+     What follows is the honest split.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Claim</th><th>Status</th><th>Basis</th></tr></thead>
+      <tbody>
+        <tr><td>D(u) factorisation holds at N=2</td><td><span class="pill ok">verified</span></td><td>exact symbolic expansion</td></tr>
+        <tr><td class="mono">t(C_1+C_2)=D_1, t²C_1C_2=D_2</td><td><span class="pill ok">verified</span></td><td>coefficient matching</td></tr>
+        <tr><td class="mono">[C_1, C_2] = 0</td><td><span class="pill ok">verified</span></td><td>exact simplification</td></tr>
+        <tr><td>The <span class="mono">C_i</span> of eq. (52) is a different object</td><td><span class="pill ok">verified</span></td><td>difference survives on symmetric functions</td></tr>
+        <tr><td>eq. (60) differs from <span class="mono">Σ C̃_i x_i C̃_i</span> by a constant</td><td><span class="pill ok">verified</span></td><td>restriction to symmetric functions</td></tr>
+        <tr><td class="mono">S_{(−1,2)}</td><td><span class="pill ok">verified</span></td><td>lowers degree by exactly 1, case by case</td></tr>
+        <tr><td class="mono">R R⁻¹ = Id while R² ≠ Id</td><td><span class="pill ok">verified</span></td><td>both directions checked</td></tr>
+        <tr><td>Any statement at N &gt; 2</td><td><span class="pill no">not verified</span></td><td>outside the scope of this pass</td></tr>
+        <tr><td>The q,t matrix-model side of the paper</td><td><span class="pill no">not verified</span></td><td>not read</td></tr>
+        <tr><td>General elliptic D(u) beyond the N=2 trace identity</td><td><span class="pill no">not verified</span></td><td>not read</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="hint">Method note: symbolic simplification alone is unreliable once <span class="mono">s_{1,2}</span>
+     appears. Identities were accepted only after <span class="mono">cancel</span> followed by substitution at three
+     independent rational points. Three points is evidence, not proof — wherever a purely symbolic route existed,
+     it was used instead. Operator powers are iterated k times; a scalar power produces false failures.</p>
+</div></section>
+
+<footer id="source"><div class="wrap">
+  <div class="cols">
+    <div>
+      <h4>Source</h4>
+      <p style="margin:0 0 6px">A. Mironov, A. Morozov, A. Popolitov,<br>
+        <i>Commutative families in DIM algebra, integrable many-body systems and q,t matrix models</i></p>
+      <p style="margin:0"><a href="https://arxiv.org/abs/2406.16688" target="_blank" rel="noopener">arXiv:2406.16688v2</a></p>
+      <p style="margin:10px 0 0">Related: L. Bishler, A. Mironov, A. Popolitov,<br>
+        <i>Integrable systems inspired by DAHA and DIM algebra: type C<sup>∨</sup>C versus type A</i>,
+        <a href="https://arxiv.org/abs/2607.06738" target="_blank" rel="noopener">arXiv:2607.06738</a></p>
+    </div>
+    <div>
+      <h4>Files</h4>
+      <ul>
+        <li><a href="canvas.html">Interactive map</a></li>
+        <li><a href="https://github.com/kanghelyu/mathflow-site" target="_blank" rel="noopener">Repository</a></li>
+        <li><a href="https://github.com/kanghelyu/omni-flow" target="_blank" rel="noopener">OmniFlow</a></li>
+        <li><a href="https://omniflow.kanghelyu.org" target="_blank" rel="noopener">omniflow.kanghelyu.org</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Reading the map</h4>
+      <ul>
+        <li>Arrows point from what provides to what results.</li>
+        <li>Solid = derivation or flow · dashed = citation.</li>
+        <li>Card colours encode type: definition, theorem, lemma, task.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="fine">
+    Built with <a href="https://github.com/kanghelyu/omni-flow" target="_blank" rel="noopener">OmniFlow</a>,
+    distributed under CC BY-NC 4.0. The interactive canvas is an unmodified OmniFlow HTML export.
+    Mathematical content is a private study record and is not affiliated with the authors of the paper.
+  </div>
+</div></footer>
+
+</body>
+</html>
