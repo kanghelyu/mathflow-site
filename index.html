@@ -75,14 +75,15 @@
   h2 + .sub{color:var(--fg3);font-size:14px;margin:0 0 22px}
 
   /* ---------- canvas embed ---------- */
-  .mapcard{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden}
-  .mapcard .bar{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line);
+  .bleed{width:100vw;margin-left:calc(50% - 50vw)}
+  .mapcard{background:var(--panel);border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden}
+  .mapcard .bar{display:flex;align-items:center;gap:10px;padding:11px 22px;border-bottom:1px solid var(--line);
                 background:var(--bg2);font-family:var(--mono);font-size:12.5px;color:var(--fg3)}
   .dot{width:9px;height:9px;border-radius:50%;background:#2B3852}
   .mapcard .bar .sp{margin-left:auto;display:flex;gap:16px;align-items:center}
   .mapcard .bar a{text-decoration:none;color:var(--fg3)}
   .mapcard .bar a:hover{color:var(--fg)}
-  iframe{display:block;width:100%;height:min(78vh,860px);border:0;background:var(--bg)}
+  iframe{display:block;width:100%;height:min(86vh,940px);border:0;background:var(--bg)}
   .hint{color:var(--fg3);font-size:13px;margin:12px 2px 0}
 
   /* ---------- groups ---------- */
@@ -183,23 +184,27 @@
   </div>
 </div></header>
 
-<section id="map"><div class="wrap">
-  <h2>The map</h2>
-  <p class="sub">Click a card to read its note with the formulas rendered. Click it again in the panel to
-     highlight what feeds it (blue) and what it feeds (red). Drag to rearrange, scroll to zoom, search across all notes.</p>
+<section id="map" class="bleed">
+  <div class="wrap">
+    <h2>The map</h2>
+    <p class="sub">Click a card to read its note with the formulas rendered. Use <b>Fit</b> and scroll to zoom;
+       drag a card to rearrange it. Labels appear as you zoom in.</p>
+  </div>
   <div class="mapcard">
     <div class="bar">
       <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-      <span style="margin-left:8px">DIMAlgebraN2FromPapertoV-775n · clusters</span>
+      <span style="margin-left:8px">DIMAlgebraN2FromPapertoV-775n · clusters · 21 nodes / 27 edges / 5 groups</span>
       <span class="sp">
         <span>offline · no server</span>
         <a href="canvas.html" target="_blank" rel="noopener">open full screen ↗</a>
       </span>
     </div>
-    <iframe src="canvas.html" title="OmniFlow interactive map: DIM Algebra N=2" loading="lazy"></iframe>
+    <iframe src="canvas.html" title="OmniFlow interactive map: DIM Algebra N=2"></iframe>
   </div>
-  <p class="hint">The map is a single self-contained HTML file with KaTeX inlined &mdash; it renders identically offline.</p>
-</div></section>
+  <div class="wrap">
+    <p class="hint">The map is a single self-contained HTML file with KaTeX inlined &mdash; it renders identically offline.</p>
+  </div>
+</section>
 
 <section id="contents"><div class="wrap">
   <h2>What the map contains</h2>
