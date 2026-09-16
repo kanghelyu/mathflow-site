@@ -28,6 +28,14 @@
   var SELF = document.currentScript;
   var SITE = new URL("../", SELF ? SELF.src : location.href); // site root (script lives in assets/)
 
+  /* ---------------------------------------------------------- cache busting */
+  /* Cloudflare was serving assets/app.js with max-age=14400 (4h), so a fixed
+   * bug kept being served from cache and a deploy looked like it "did nothing".
+   * The build stamps a content hash here and every subresource request below
+   * carries it, so a changed file is always fetched. Replaced at build time. */
+  var V = "dc3e23ca";
+  var Q = V && V.indexOf("@@") !== 0 ? "?v=" + V : "";
+
   /* ------------------------------------------------- published-site defaults */
   /* app.js reads its language and theme from localStorage and hard-defaults the
    * language to zh (`let LANG = localStorage.getItem("of-lang") || "zh"`).
@@ -51,10 +59,10 @@
    * The modules live next to this script, under assets/lib/. */
   var LIB = new URL("lib/", SELF ? new URL(".", SELF.src) : new URL("assets/", location.href)).href;
   var libsReady = Promise.all([
-    import(LIB + "graph-core.js"),
-    import(LIB + "graph-analysis.js"),
-    import(LIB + "group-suggest.js"),
-    import(LIB + "converters.js"),
+    import(LIB + "graph-core.js" + Q),
+    import(LIB + "graph-analysis.js" + Q),
+    import(LIB + "group-suggest.js" + Q),
+    import(LIB + "converters.js" + Q),
   ]).then(function (m) {
     return { core: m[0], an: m[1], gs: m[2], cv: m[3] };
   });
@@ -87,12 +95,12 @@
 
   function loadIndex() {
     if (index) return Promise.resolve(index);
-    return jsonFetch(DATA + "index.json").then(function (d) { index = d; return d; });
+    return jsonFetch(DATA + "index.json" + Q).then(function (d) { index = d; return d; });
   }
 
   function loadBundle(id) {
     if (bundles.has(id)) return Promise.resolve(bundles.get(id));
-    return jsonFetch(DATA + "g/" + encodeURIComponent(id) + ".json").then(function (b) {
+    return jsonFetch(DATA + "g/" + encodeURIComponent(id) + ".json" + Q).then(function (b) {
       bundles.set(id, b);
       return b;
     });
