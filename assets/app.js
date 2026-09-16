@@ -154,6 +154,13 @@ $("btnLang").onclick = async ()=>{
 };
 
 /* ================= 相机（agent-flow 移植：rAF + 四次缓出） ================= */
+/* Zoom bounds. MIN_K used to be a hard 0.4 baked into every scale computation
+ * (fit / zoom buttons / wheel / thumbnails), which made "fit" unable to fit:
+ * on a tablet-width canvas the graph needs roughly k ≈ 0.14, so the 0.4 floor
+ * rendered it ~3× too large — the map overflowed behind the panels and neither
+ * Fit nor zoom-out could recover. Keep the ceiling, lift the floor to a real
+ * minimum so fitting always fits. */
+const MIN_K = 0.05;
 let view = { x: 60, y: 40, k: 1 };
 let viewAnimation = null;
 function cancelViewAnimation(){
@@ -193,7 +200,7 @@ function screenToWorld(cx, cy){
 }
 function focusNode(node, options = {}){
   const rect = canvas.getBoundingClientRect();
-  const k = Math.min(1.15, Math.max(0.4, Number(options.k ?? Math.max(view.k, 0.96))));
+  const k = Math.min(1.15, Math.max(MIN_K, Number(options.k ?? Math.max(view.k, 0.96))));
   animateView({ k, x: rect.width / 2 - (node.x + node.w / 2) * k, y: rect.height / 2 - (node.y + node.h / 2) * k }, options.duration ?? 720);
 }
 function fitView(options = {}){
@@ -207,14 +214,14 @@ function fitView(options = {}){
   const w = Math.max(1, maxX - minX), h = Math.max(1, maxY - minY);
   const paddingRatio = Number.isFinite(Number(options.padding)) ? Number(options.padding) : 0.16;
   const padding = Math.max(36, Math.min(rect.width, rect.height) * paddingRatio);
-  const k = Math.min(1.15, Math.max(0.4, Math.min((rect.width - padding * 2) / w, (rect.height - padding * 2) / h)));
+  const k = Math.min(1.15, Math.max(MIN_K, Math.min((rect.width - padding * 2) / w, (rect.height - padding * 2) / h)));
   animateView({ k, x: (rect.width - w * k) / 2 - minX * k, y: (rect.height - h * k) / 2 - minY * k }, options.duration ?? 0);
 }
 function zoomCenter(factor){
   cancelViewAnimation();
   const rect = canvas.getBoundingClientRect();
   const cx = rect.width / 2, cy = rect.height / 2;
-  const k = Math.min(2.5, Math.max(0.4, view.k * factor));
+  const k = Math.min(2.5, Math.max(MIN_K, view.k * factor));
   view = { k, x: cx - (cx - view.x) * (k / view.k), y: cy - (cy - view.y) * (k / view.k) };
   applyView();
 }
@@ -2912,7 +2919,7 @@ canvas.addEventListener("wheel", (event)=>{
   const rect = canvas.getBoundingClientRect();
   const cx = event.clientX - rect.left, cy = event.clientY - rect.top;
   if (event.ctrlKey || event.metaKey){
-    const k = Math.min(2.5, Math.max(0.4, view.k * Math.exp(-event.deltaY * 0.0012)));
+    const k = Math.min(2.5, Math.max(MIN_K, view.k * Math.exp(-event.deltaY * 0.0012)));
     view = { k, x: cx - (cx - view.x) * (k / view.k), y: cy - (cy - view.y) * (k / view.k) };
   } else {
     view = { ...view, x: view.x - (event.deltaX || 0), y: view.y - (event.deltaY || 0) };
@@ -3097,7 +3104,7 @@ function renderGroupList(){
       const minX = Math.min(...members.map((m)=>m.x)), minY = Math.min(...members.map((m)=>m.y));
       const maxX = Math.max(...members.map((m)=>m.x + m.w)), maxY = Math.max(...members.map((m)=>m.y + (m._h ?? m.h)));
       const rect = canvas.getBoundingClientRect();
-      const k = Math.min(1, Math.max(0.4, Math.min((rect.width - 140) / Math.max(1, maxX - minX), (rect.height - 140) / Math.max(1, maxY - minY))));
+      const k = Math.min(1, Math.max(MIN_K, Math.min((rect.width - 140) / Math.max(1, maxX - minX), (rect.height - 140) / Math.max(1, maxY - minY))));
       animateView({ k, x: (rect.width - (maxX - minX) * k) / 2 - minX * k, y: (rect.height - (maxY - minY) * k) / 2 - minY * k }, 680);
     };
   });

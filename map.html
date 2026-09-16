@@ -216,28 +216,36 @@
 <script src="assets/static-api.js"></script>
 <script src="assets/app.js"></script>
 
-<div id="mf-bar" style="position:fixed;top:54px;left:50%;transform:translateX(-50%);z-index:9999;
-     display:flex;align-items:center;gap:10px;padding:5px 12px;
-     font:12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+<div id="mf-bar" style="position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:60;
+     display:flex;align-items:center;gap:8px;padding:4px 11px;max-width:calc(100% - 20px);
+     font:12px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:nowrap;
      background:rgba(11,15,23,.82);backdrop-filter:blur(10px);border:1px solid #222C3F;
      border-radius:999px;color:#A9BAD3">
   <a id="mf-home" href="index.html" style="color:#C7D2FE;text-decoration:none">← all maps</a>
   <span style="color:#3A4C6B">|</span>
   <span id="mf-status" title="This page is a static snapshot. Edits stay in this browser.">snapshot · read-only</span>
   <button id="mf-reset" hidden style="font:inherit;color:#A9BAD3;background:#161E2E;border:1px solid #2C3A52;
-     border-radius:999px;padding:2px 8px;cursor:pointer">reset local edits</button>
+     border-radius:999px;padding:1px 7px;cursor:pointer">reset</button>
 </div>
 <script>
 (function(){
+  // Park the bar inside the canvas so it centres over the drawing area, not the window.
+  function mount(){
+    var bar = document.getElementById("mf-bar"); if (!bar) return false;
+    var wrap = document.getElementById("canvasWrap");
+    if (wrap && bar.parentElement !== wrap) wrap.appendChild(bar);
+    return !!wrap;
+  }
   function paint(){
     var mf = window.MathFlow; if (!mf) return;
     var s = document.getElementById("mf-status"), b = document.getElementById("mf-reset");
     var d = (mf.stats && mf.stats()) || {};
-    if (mf.hasEdits && mf.hasEdits()){ s.textContent = "snapshot · " + d.editedGraphs + " locally edited"; b.hidden = false; }
+    if (mf.hasEdits && mf.hasEdits()){ s.textContent = "snapshot · " + d.editedGraphs + " edited"; b.hidden = false; }
     b.onclick = function(){ mf.resetEdits(); location.reload(); };
   }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", paint); else paint();
-  setTimeout(paint, 1200);
+  function boot(){ if (!mount()) { setTimeout(boot, 300); return; } paint(); }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot); else boot();
+  setTimeout(boot, 1200);
 })();
 </script>
 </body>
