@@ -33,7 +33,7 @@
    * bug kept being served from cache and a deploy looked like it "did nothing".
    * The build stamps a content hash here and every subresource request below
    * carries it, so a changed file is always fetched. Replaced at build time. */
-  var V = "dc3e23ca";
+  var V = "61ab273c";
   var Q = V && V.indexOf("@@") !== 0 ? "?v=" + V : "";
 
   /* ------------------------------------------------- published-site defaults */
