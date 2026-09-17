@@ -91,6 +91,30 @@ let tree = { folders: [], assign: {} };   // Obsidian 式文件夹树
 let expandedFolders = new Set([""]);
 const $ = (id) => document.getElementById(id);
 const edgeLayer = $("edgeLayer"), nodesLayer = $("nodesLayer"), groupsLayer = $("groupsLayer");
+
+/** Edge-layer coordinate origin.
+ *
+ * The SVG used to be 1px x 1px with `overflow: visible`, i.e. every edge was
+ * painted *outside* its own viewport. That is fragile: an engine is free to clip
+ * it (edges vanish), and a 1px box that also carried `will-change: transform` got
+ * its own compositing layer, which can be snapped to device pixels independently
+ * of the cards beside it — cards and lines then sit at a constant offset from each
+ * other on exactly the devices you cannot test on.
+ *
+ * So the SVG now has a real viewport big enough to contain the content, and all
+ * edges live in a <g> translated by this origin (world coords are then inside the
+ * box; ±10000 covers any realistic map, and `overflow: visible` stays as the
+ * fallback for anything beyond it). */
+const EDGE_ORIGIN = 10000;
+let _edgeRoot = null;
+function edgeRoot(){
+  if (_edgeRoot && _edgeRoot.isConnected) return _edgeRoot;
+  _edgeRoot = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  _edgeRoot.setAttribute("id", "edgeRoot");
+  _edgeRoot.setAttribute("transform", `translate(${EDGE_ORIGIN} ${EDGE_ORIGIN})`);
+  edgeLayer.appendChild(_edgeRoot);
+  return _edgeRoot;
+}
 let edgeIndex = new Map();   // nodeId → Set(edge-group)：拖拽时只更新相邻边（O(k)），不遍历全量
 /* O(1) 查找索引：每次 current 变更时重建，取代 Array.find 的 O(n) 线性扫描 */
 let nodeIndex = new Map(), edgeIndexById = new Map();
@@ -656,7 +680,59 @@ function render(){
 }
 
 /* --- 连线（agent-flow 版式：SVG 分组 + 恒定线宽 + 填充箭头 + SVG 标签） --- */
-function edgeColorOf(edge){ return edge.color || "#64748B"; }
+/* 边色可读性下限。
+ *
+ * 边色来自类型注册表，而画布底色在深色主题下接近全黑（--canvas: #0B1120）。
+ * 注册表里 `flow` 是 #334155：对深色画布只有 ≈1.8:1，等于画了一条看不见的线 ——
+ * 用户看到的是"两张卡片没有连起来"（在手机/平板上更明显，屏幕亮度与伽马不同，
+ * 电脑上勉强能看见、设备上就完全看不见，于是看起来像设备特有的 bug）。
+ * 这里做主题感知的兜底：对比度不达标的颜色朝主题墨色方向提亮到达标为止；
+ * 已经清晰的颜色原样保留，不擅自改动用户选的色。
+ */
+const MIN_EDGE_CONTRAST = 4.5;
+const _edgeColorCache = new Map();
+function _hexToRgb(hex){
+  const h = String(hex ?? "").trim().replace(/^#/, "");
+  if (!/^([0-9a-f]{3}|[0-9a-f]{6})$/i.test(h)) return null;
+  const full = h.length === 3 ? h.split("").map((c)=> c + c).join("") : h;
+  return [0, 2, 4].map((i)=> parseInt(full.slice(i, i + 2), 16));
+}
+function _lin(v){ const c = v / 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
+function _lum(rgb){ return 0.2126 * _lin(rgb[0]) + 0.7152 * _lin(rgb[1]) + 0.0722 * _lin(rgb[2]); }
+function _contrast(a, b){
+  const la = _lum(a), lb = _lum(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+function _canvasRgb(){
+  const theme = document.documentElement.getAttribute("data-theme") ?? "";
+  const key = `bg:${theme}`;
+  if (_edgeColorCache.has(key)) return _edgeColorCache.get(key);
+  const raw = (getComputedStyle(document.documentElement).getPropertyValue("--canvas") || "").trim();
+  const rgb = _hexToRgb(raw) ?? [11, 17, 32];
+  _edgeColorCache.set(key, rgb);
+  return rgb;
+}
+function readableEdgeColor(hex){
+  const bg = _canvasRgb();
+  const rgb = _hexToRgb(hex);
+  if (!rgb) return hex;
+  const key = `${bg.join(",")}|${hex}`;
+  if (_edgeColorCache.has(key)) return _edgeColorCache.get(key);
+  let out = hex;
+  if (_contrast(rgb, bg) < MIN_EDGE_CONTRAST){
+    const to = _lum(bg) < 0.5 ? [255, 255, 255] : [0, 0, 0];
+    for (let f = 0.06; f <= 1.0001; f += 0.06){
+      const mix = rgb.map((c, i)=> Math.round(c + (to[i] - c) * f));
+      if (_contrast(mix, bg) >= MIN_EDGE_CONTRAST){
+        out = `#${mix.map((c)=> c.toString(16).padStart(2, "0")).join("")}`;
+        break;
+      }
+    }
+  }
+  _edgeColorCache.set(key, out);
+  return out;
+}
+function edgeColorOf(edge){ return readableEdgeColor(edge.color || "#64748B"); }
 
 /* 拖拽/拉线时的极速路径更新：只改已有元素的 d 属性，不重建 DOM。
    性能上限：rAF 帧同步——每帧最多执行一次更新（≈16ms 一帧），
@@ -2397,7 +2473,7 @@ function updateConnLive(){
   if (!conn){
     conn = document.createElementNS("http://www.w3.org/2000/svg", "path");
     conn.setAttribute("class", "conn");
-    edgeLayer.appendChild(conn);
+    edgeRoot().appendChild(conn);
     pendingLink.conn = conn;   // 缓存：避免每帧 querySelector
   }
   conn.setAttribute("d", `M ${a.x} ${a.y} C ${a.x + bend} ${a.y}, ${e.x - bend} ${e.y}, ${e.x} ${e.y}`);
@@ -2407,7 +2483,7 @@ function updateConnLive(){
   }
 }
 function renderEdges(){
-  if (!current){ edgeLayer.innerHTML = ""; return; }
+  if (!current){ edgeLayer.innerHTML = ""; _edgeRoot = null; return; }
   const defs = [];
   const seen = new Set();
   const groups = [];
@@ -2444,7 +2520,8 @@ function renderEdges(){
       groups.push(`<path class="conn" d="M ${a.x} ${a.y} C ${a.x + bend} ${a.y}, ${e.x - bend} ${e.y}, ${e.x} ${e.y}"/>`);
     }
   }
-  edgeLayer.innerHTML = `<defs></defs>` + groups.join("");
+  edgeLayer.innerHTML = `<defs></defs><g id="edgeRoot" transform="translate(${EDGE_ORIGIN} ${EDGE_ORIGIN})">` + groups.join("") + `</g>`;
+  _edgeRoot = edgeLayer.querySelector("#edgeRoot");
   if (pendingLink) pendingLink.conn = null;   // innerHTML 重建后 conn 缓存失效
   edgeIndex = new Map();
   edgeLayer.querySelectorAll(".edge-group").forEach((g)=>{
