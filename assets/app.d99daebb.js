@@ -10,7 +10,7 @@ const I18N = {
     searchNodes:"搜索名称/备注/标签…", inspector:"检查器",
     folderNamePrompt:"文件夹名称：", renameFolderPrompt:"新的文件夹路径：", moveToPrompt:"移动到文件夹（留空 = 根目录）：", confirmFolderDelete:"删除该文件夹？其中的图会上移到父目录。",
     hintEmpty:"选中节点或连线后在此编辑一切：文字、类型、颜色（填充/边框/文字）、图标、状态；连线可改标签、颜色、线型、箭头。",
-    hintKeys:"拖拽画布平移 · ⌘/Ctrl+滚轮缩放 · 滚轮平移 · 从节点右侧圆点拖出连线 · Delete 删除选中",
+    hintKeys:"拖拽画布平移 · ⌘/Ctrl+滚轮缩放 · 滚轮平移 · 双指捏合缩放/平移 · 从节点右侧圆点拖出连线 · Delete 删除选中",
     nodeProps:"节点属性", edgeProps:"连线属性", graphProps:"图属性", label:"文字", type:"类型", icon:"图标",
     fill:"填充色", border:"边框色", textColor:"文字色", save:"保存", noteMd:"备注全文", trace:"依赖追踪", makeGroup:"从选中建组", delete:"删除",
     saveFailed:"保存失败", pickNodeType:"选择类型", catNode:"□ 新建流程框 ▾", handleT:"入点", handleS:"拖到目标框连线",
@@ -35,7 +35,7 @@ const I18N = {
     searchNodes:"Search label / note / tag…", inspector:"Inspector",
     folderNamePrompt:"Folder name:", renameFolderPrompt:"New folder path:", moveToPrompt:"Move to folder (empty = root):", confirmFolderDelete:"Delete this folder? Its graphs move up to the parent folder.",
     hintEmpty:"Select a node or edge to edit everything: text, type, colors (fill/border/text), icon, status; edges support label, color, style and arrows.",
-    hintKeys:"Drag canvas to pan · ⌘/Ctrl+wheel zoom · wheel pan · drag the right dot to connect · Delete removes",
+    hintKeys:"Drag canvas to pan · ⌘/Ctrl+wheel zoom · pinching zooms/pans on touch · drag the right dot to connect · Delete removes",
     nodeProps:"Node", edgeProps:"Edge", graphProps:"Graph", label:"Label", type:"Type", icon:"Icon",
     fill:"Fill", border:"Border", textColor:"Text", save:"Save", noteMd:"Full note", trace:"Trace deps", makeGroup:"Group selection", delete:"Delete",
     saveFailed:"Save failed", pickNodeType:"Pick a type", catNode:"□ New node ▾", handleT:"Target", handleS:"Drag to a node to connect",
@@ -1248,14 +1248,18 @@ function cvBind(){
 function cvStartPan(e, onClick){
   const vp = $("viewport");
   const sx = e.clientX, sy = e.clientY, ox = view.x, oy = view.y;
+  const pid = e.pointerId;
   let moved = false;
   vp.classList.add("panning");
   beginViewportMove();
   const mv = (ev)=>{
+    if (ev.pointerId !== pid) return;
+    if (pinch){ moved = true; return; }          // 捏合期间让位，且不当作"原地点击"
     if (Math.abs(ev.clientX - sx) > 2 || Math.abs(ev.clientY - sy) > 2) moved = true;
     view.x = ox + (ev.clientX - sx); view.y = oy + (ev.clientY - sy); applyView();
   };
-  const up = ()=>{
+  const up = (ev)=>{
+    if (ev && ev.pointerId !== pid) return;
     window.removeEventListener("pointermove", mv); window.removeEventListener("pointerup", up); vp.classList.remove("panning"); endViewportMoveSoon();
     if (!moved && onClick) onClick();   // 原地点击空白才取消选择；拖动平移不影响选中/高亮
   };
@@ -1296,8 +1300,10 @@ function cvStartGroupDrag({ g, ms }, e){
   const live = ()=> ids.map((id)=> nodeById(id)).filter(Boolean);
   const liveGroup = ()=> (current.groups ?? []).find((x)=> x.id === g.id) ?? g;
   const sx = e.clientX, sy = e.clientY;
+  const pid = e.pointerId;
   beginInteract();
   const mv = (ev)=>{
+    if (ev.pointerId !== pid || pinch) return;   // 只认自己那根手指；捏合期间让位
     const dx = (ev.clientX - sx) / view.k, dy = (ev.clientY - sy) / view.k;
     for (const n of live()){
       const o = origin.get(n.id);
@@ -1341,7 +1347,9 @@ function cvStartLink(node, e){
   const w0 = cvWorldFromEvent(e);
   pendingLink = { source: node.id, conn: w0, hover: null };
   beginInteract();
+  const pid = e.pointerId;
   const mv = (ev)=>{
+    if (ev.pointerId !== pid || pinch) return;   // 只认自己那根手指；捏合期间让位
     const w = cvWorldFromEvent(ev);
     pendingLink.conn = w;
     const hit = cvHitNode(w);
@@ -1349,8 +1357,10 @@ function cvStartLink(node, e){
     cvDraw();
   };
   const up = (ev)=>{
+    if (ev && ev.pointerId !== pid) return;
     window.removeEventListener("pointermove", mv); window.removeEventListener("pointerup", up);
     endInteract();
+    if (pinch){ pendingLink = null; cvDraw(); return; }   // 捏合打断连线：取消，不误建边
     const w = cvWorldFromEvent(ev);
     const target = cvHitNode(w);
     if (target && target.id !== node.id){
@@ -1367,15 +1377,19 @@ function cvMarquee(e){
   const box = document.createElement("div");
   box.style.cssText = "position:absolute;border:1px dashed var(--accent);background:rgba(56,189,248,.12);border-radius:4px;pointer-events:none;z-index:8";
   vp.appendChild(box);
+  const pid = e.pointerId;
   const mv = (ev)=>{
+    if (ev.pointerId !== pid || pinch) return;   // 只认自己那根手指；捏合期间让位
     const x1 = Math.min(sx, ev.clientX) - r.left, x2 = Math.max(sx, ev.clientX) - r.left;
     const y1 = Math.min(sy, ev.clientY) - r.top, y2 = Math.max(sy, ev.clientY) - r.top;
     box.style.left = x1 + "px"; box.style.top = y1 + "px";
     box.style.width = (x2 - x1) + "px"; box.style.height = (y2 - y1) + "px";
   };
   const up = (ev)=>{
+    if (ev && ev.pointerId !== pid) return;
     window.removeEventListener("pointermove", mv); window.removeEventListener("pointerup", up);
     box.remove();
+    if (pinch) return;                           // 捏合打断框选：不选中任何东西
     const w1 = cvWorldFromEvent({ clientX: sx, clientY: sy });
     const w2 = cvWorldFromEvent(ev);
     const x1 = Math.min(w1.x, w2.x), x2 = Math.max(w1.x, w2.x), y1 = Math.min(w1.y, w2.y), y2 = Math.max(w1.y, w2.y);
@@ -2873,7 +2887,7 @@ function startPointerDrag(event, { onMove, onEnd, onAbort }){
   const target = event.currentTarget ?? null;
   try { target?.setPointerCapture?.(pointerId); } catch { /* capture is best-effort */ }
   const listeners = [
-    ["pointermove", (e)=>{ if (e.pointerId === pointerId) onMove?.(e); }],
+    ["pointermove", (e)=>{ if (e.pointerId === pointerId && !pinch) onMove?.(e); }],
     ["pointerup", (e)=>{ if (e.pointerId !== pointerId) return; stop(); onEnd?.(); }],
     ["pointercancel", (e)=>{ if (e.pointerId !== pointerId) return; stop(); (onAbort ?? onEnd)?.(); }],
   ];
@@ -2883,6 +2897,77 @@ function startPointerDrag(event, { onMove, onEnd, onAbort }){
   }
   for (const [type, fn] of listeners) window.addEventListener(type, fn);
 }
+
+/* ================= 双指捏合缩放 / 双指平移（触摸屏） =================
+ *
+ * `#canvasWrap` 是 touch-action:none，浏览器不会替我们缩放，必须自己实现。此前缩放只有
+ * 滚轮、± 按钮和「适应」三条路径 —— 平板上等于不能缩放；而且两处平移手势在 window 上监听
+ * pointermove 时**没有按 pointerId 过滤**，第二根手指会同时驱动两个平移互相打架。
+ *
+ * 做法：跟踪落在画布上的触摸指针，出现第二根手指时进入捏合，按两指中点同时完成平移
+ * （与地图类应用一致：捏合的同时就能拖）。起手时给其余触点派发合成 pointercancel，
+ * 复用既有的 abort 路径让节点/分组拖拽干净回滚，不留下半截位移。
+ */
+let pinch = null;                       // { dist, mid, view } —— 有值即处于捏合中
+const touchPoints = new Map();          // pointerId -> { x, y }
+
+function pinchPair(){
+  const [a, b] = [...touchPoints.values()];
+  if (!a || !b) return null;
+  return {
+    dist: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
+    mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+  };
+}
+
+window.addEventListener("pointerdown", (e)=>{
+  if (e.pointerType !== "touch" || !canvas.contains(e.target)) return;
+  touchPoints.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (touchPoints.size !== 2 || pinch) return;
+  const pair = pinchPair();
+  cancelViewAnimation();
+  for (const id of touchPoints.keys()){
+    // 合成 pointercancel 让正在进行的平移/拖拽/连线走既有的 abort 路径干净中止。
+    // 必须显式标记它并让 endTouch 忽略 —— 否则我们刚建立的触点会被当成"手指抬起"
+    // 清掉，捏合永远启动不了，而且 pinch 会一直挂着把之后的平移全堵死。
+    // （不用 isTrusted 判断：无头测试里事件全是合成的，那样连真实的抬手也会被忽略。）
+    const cancel = new PointerEvent("pointercancel", { pointerId: id, pointerType: "touch", bubbles: true });
+    cancel.__omniPinchCancel = true;
+    window.dispatchEvent(cancel);
+  }
+  pinch = { dist: pair.dist, mid: pair.mid, view: { ...view } };
+}, true);
+
+window.addEventListener("pointermove", (e)=>{
+  if (e.pointerType !== "touch" || !touchPoints.has(e.pointerId)) return;
+  touchPoints.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (!pinch || touchPoints.size < 2) return;
+  const pair = pinchPair();
+  if (!pair) return;
+  const r = canvas.getBoundingClientRect();
+  const k = Math.min(2.5, Math.max(MIN_K, pinch.view.k * (pair.dist / pinch.dist)));
+  // 让起始中点下的世界点始终留在当前中点下 —— 于是缩放与平移在一次手势里同时完成
+  const ox = pinch.mid.x - r.left - pinch.view.x;
+  const oy = pinch.mid.y - r.top - pinch.view.y;
+  view = {
+    k,
+    x: pair.mid.x - r.left - ox * (k / pinch.view.k),
+    y: pair.mid.y - r.top - oy * (k / pinch.view.k),
+  };
+  applyView();
+}, { capture: true, passive: false });
+
+function endTouch(e){
+  if (e.pointerType !== "touch") return;
+  if (e.__omniPinchCancel) return;                         // 捏合自己派发的，不算抬手
+  if (!touchPoints.has(e.pointerId)) return;
+  touchPoints.delete(e.pointerId);
+  if (touchPoints.size < 2 && pinch) pinch = null;
+}
+window.addEventListener("pointerup", endTouch, true);
+window.addEventListener("pointercancel", endTouch, true);
+// 切到后台/失焦时触点不会再有 up，清空免得下次误判为"两根手指"
+window.addEventListener("blur", ()=>{ touchPoints.clear(); pinch = null; });
 
 function beginNodeDrag(node, event){
   if (event.button !== 0 || event.target.closest(".handle")) return;
@@ -2969,15 +3054,20 @@ canvas.addEventListener("pointerdown", (event)=>{
   cancelViewAnimation();
   event.preventDefault();
   const startX = event.clientX, startY = event.clientY, origin = { ...view };
+  const pid = event.pointerId;   // 只认按下时的那根手指，否则第二根手指会同时驱动两个手势
   canvas.classList.add("panning");
   let moved = false;
   const move = (e)=>{
+    if (e.pointerId !== pid) return;
+    // 捏合期间本手势让位；把 moved 置真，免得松手时被当成"原地点击"而清掉选中
+    if (pinch){ moved = true; return; }
     const dx = e.clientX - startX, dy = e.clientY - startY;
     if (Math.abs(dx) > 2 || Math.abs(dy) > 2) moved = true;
     view = { ...origin, x: origin.x + dx, y: origin.y + dy };
     applyView();
   };
-  const up = ()=>{
+  const up = (e)=>{
+    if (e && e.pointerId !== pid) return;
     window.removeEventListener("pointermove", move);
     window.removeEventListener("pointerup", up);
     canvas.classList.remove("panning");
